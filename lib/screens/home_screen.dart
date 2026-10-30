@@ -4,6 +4,7 @@ import '../models/note.dart';
 import '../models/initial_data.dart';
 import '../theme/app_colors.dart';
 import '../widgets/note_card.dart';
+import '../widgets/pin_dialog.dart';
 import 'note_editor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -426,7 +427,18 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToEditNote(BuildContext context, Note note) {
+  void _navigateToEditNote(BuildContext context, Note note) async {
+    if (note.isLocked) {
+      final isVerified = await PinDialog.showVerify(
+        context: context,
+        title: 'Mở khóa ghi chú',
+        subtitle: 'Ghi chú này đã được bảo vệ bằng mã PIN',
+        onVerify: (pin) async => controller.verifyPin(pin),
+      );
+      if (isVerified != true) return;
+    }
+
+    if (!context.mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NoteEditorScreen(controller: controller, note: note),

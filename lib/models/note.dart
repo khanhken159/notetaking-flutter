@@ -104,6 +104,10 @@ class Note {
   List<String> labelIds;
   bool isPinned;
   bool isDeleted;
+  bool isLocked;
+  int? audioDuration;
+  String? audioTitle;
+  String? audioData;
   final int createdAt;
   int updatedAt;
   int? deletedAt;
@@ -117,6 +121,10 @@ class Note {
     List<String>? labelIds,
     this.isPinned = false,
     this.isDeleted = false,
+    this.isLocked = false,
+    this.audioDuration,
+    this.audioTitle,
+    this.audioData,
     dynamic createdAt,
     dynamic updatedAt,
     dynamic deletedAt,
@@ -133,6 +141,15 @@ class Note {
     return null;
   }
 
+  bool get hasAudio => audioDuration != null && audioDuration! > 0;
+
+  String get audioDurationFormatted {
+    if (audioDuration == null) return '0:00';
+    final mins = audioDuration! ~/ 60;
+    final secs = audioDuration! % 60;
+    return '$mins:${secs.toString().padLeft(2, '0')}';
+  }
+
   DateTime get createdDateTime => DateTime.fromMillisecondsSinceEpoch(createdAt);
   DateTime get updatedDateTime => DateTime.fromMillisecondsSinceEpoch(updatedAt);
   DateTime? get deletedDateTime => deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(deletedAt!) : null;
@@ -146,6 +163,10 @@ class Note {
         'labelIds': labelIds,
         'isPinned': isPinned,
         'isDeleted': isDeleted,
+        'isLocked': isLocked,
+        'audioDuration': audioDuration,
+        'audioTitle': audioTitle,
+        'audioData': audioData,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
         'deletedAt': deletedAt,
@@ -166,6 +187,10 @@ class Note {
             [],
         isPinned: json['isPinned'] as bool? ?? false,
         isDeleted: json['isDeleted'] as bool? ?? false,
+        isLocked: json['isLocked'] as bool? ?? false,
+        audioDuration: json['audioDuration'] as int?,
+        audioTitle: json['audioTitle'] as String?,
+        audioData: json['audioData'] as String?,
         createdAt: json['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
         updatedAt: json['updatedAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
         deletedAt: json['deletedAt'] as int?,
@@ -180,6 +205,10 @@ class Note {
     List<String>? labelIds,
     bool? isPinned,
     bool? isDeleted,
+    bool? isLocked,
+    int? audioDuration,
+    String? audioTitle,
+    String? audioData,
     dynamic createdAt,
     dynamic updatedAt,
     dynamic deletedAt,
@@ -193,6 +222,10 @@ class Note {
         labelIds: labelIds ?? List.from(this.labelIds),
         isPinned: isPinned ?? this.isPinned,
         isDeleted: isDeleted ?? this.isDeleted,
+        isLocked: isLocked ?? this.isLocked,
+        audioDuration: audioDuration ?? this.audioDuration,
+        audioTitle: audioTitle ?? this.audioTitle,
+        audioData: audioData ?? this.audioData,
         createdAt: createdAt != null ? _parseTimestamp(createdAt) : this.createdAt,
         updatedAt: updatedAt != null ? _parseTimestamp(updatedAt) : this.updatedAt,
         deletedAt: deletedAt != null ? _parseTimestamp(deletedAt) : this.deletedAt,

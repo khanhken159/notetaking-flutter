@@ -112,11 +112,19 @@ void main() {
     await tester.tap(restoreBtn);
     await tester.pumpAndSettle();
 
+    // Verify it is restored in controller
+    expect(controller.activeNotes.any((n) => n.title == 'Kế hoạch công tác TP.HCM'), isTrue);
+
     // Switch back to "Ghi chú" tab using bottom navigation icon
     await tester.tap(find.byIcon(Icons.note_alt_outlined));
     await tester.pumpAndSettle();
 
-    // Note should be back on home screen
+    // Scroll until visible if needed
+    await tester.scrollUntilVisible(
+      find.text('Kế hoạch công tác TP.HCM'),
+      200.0,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Kế hoạch công tác TP.HCM'), findsOneWidget);
   });
 }

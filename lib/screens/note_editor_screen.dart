@@ -4,6 +4,8 @@ import '../controllers/note_controller.dart';
 import '../models/note.dart';
 import '../models/initial_data.dart';
 import '../theme/app_colors.dart';
+import '../widgets/pin_dialog.dart';
+import '../widgets/audio_memo_widget.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final NoteController controller;
@@ -28,6 +30,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late List<ChecklistItem> _checklist;
   late bool _isChecklistMode;
   late int _createdAt;
+  late bool _isLocked;
+  int? _audioDuration;
+  String? _audioTitle;
+  bool _isRecording = false;
 
   Timer? _debounceTimer;
   bool _isSaving = false;
@@ -47,6 +53,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _checklist = n.checklist.map((c) => c.copyWith()).toList();
       _isChecklistMode = n.checklist.isNotEmpty;
       _createdAt = n.createdAt;
+      _isLocked = n.isLocked;
+      _audioDuration = n.audioDuration;
+      _audioTitle = n.audioTitle;
     } else {
       _noteId = 'note_${DateTime.now().millisecondsSinceEpoch}';
       _titleController = TextEditingController();
@@ -56,6 +65,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _checklist = [];
       _isChecklistMode = false;
       _createdAt = DateTime.now().millisecondsSinceEpoch;
+      _isLocked = false;
+      _audioDuration = null;
+      _audioTitle = null;
     }
 
     _titleController.addListener(_onTextChanged);
@@ -87,8 +99,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
-    // If everything is completely empty, don't persist an empty note
-    if (title.isEmpty && content.isEmpty && _checklist.isEmpty) {
+    // If completely empty and no audio, don't persist an empty note
+    if (title.isEmpty && content.isEmpty && _checklist.isEmpty && _audioDuration == null) {
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -103,6 +115,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       title: _titleController.text,
       content: _contentController.text,
       isPinned: _isPinned,
+      isLocked: _isLocked,
+      audioDuration: _audioDuration,
+      audioTitle: _audioTitle,
       labelIds: _labelIds,
       checklist: _checklist,
       createdAt: _createdAt,
@@ -134,11 +149,115 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _autoSave();
   }
 
+  void _toggleLock() async {
+    if (!_isLocked) {
+      // User wants to lock this note
+      if (!widget.controller.hasPin) {
+        final newPin = await PinDialog.showSetup(
+          context: context,
+          title: 'Thiết lập mã PIN khóa ghi chú',
+          subtitle: 'Nhập mã PIN 4 số để bảo vệ các ghi chú bạn chọn',
+        );
+        if (newPin != null && newPin.isNotEmpty) {
+          await widget.controller.setPin(newPin);
+          setState(() {
+            _isLocked = true;
+          });
+          _autoSave();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('🔒 Đã khóa ghi chú này bằng mã PIN'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      } else {
+        setState(() {
+          _isLocked = true;
+        });
+        _autoSave();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔒 Đã khóa ghi chú này'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } else {
+      // User wants to unlock this note
+      final isVerified = await PinDialog.showVerify(
+        context: context,
+        title: 'Mở khóa ghi chú này',
+        subtitle: 'Nhập mã PIN để bỏ chế độ khóa cho ghi chú',
+        onVerify: (pin) async => widget.controller.verifyPin(pin),
+      );
+
+      if (isVerified == true) {
+        setState(() {
+          _isLocked = false;
+        });
+        _autoSave();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔓 Đã bỏ khóa ghi chú này'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _toggleRecording() {
+    setState(() {
+      _isRecording = !_isRecording;
+    });
+  }
+
+  void _onSaveRecording(int durationSeconds) {
+    setState(() {
+      _audioDuration = durationSeconds;
+      _audioTitle = 'Ghi âm (${durationSeconds}s)';
+      _isRecording = false;
+    });
+    _autoSave();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🎙️ Đã lưu bản ghi âm thành công'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _onCancelRecording() {
+    setState(() {
+      _isRecording = false;
+    });
+  }
+
+  void _onDeleteAudio() {
+    setState(() {
+      _audioDuration = null;
+      _audioTitle = null;
+    });
+    _autoSave();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã xóa bản ghi âm'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _toggleChecklistMode() {
     setState(() {
       _isChecklistMode = !_isChecklistMode;
       if (_isChecklistMode && _checklist.isEmpty) {
-        // If content has lines, convert to checklist items
         final lines = _contentController.text.split('\n').where((l) => l.trim().isNotEmpty);
         if (lines.isNotEmpty) {
           _checklist = lines.map((l) => ChecklistItem(
@@ -220,16 +339,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Chọn nhãn cho ghi chú',
+                          'Gắn nhãn ghi chú',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
+                        TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Xong'),
                         ),
                       ],
                     ),
@@ -237,9 +356,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     if (allLabels.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          'Chưa có nhãn nào. Hãy tạo nhãn trong mục Quản lý nhãn.',
-                          style: TextStyle(color: AppColors.textSecondary),
+                        child: Center(
+                          child: Text(
+                            'Chưa có nhãn nào. Vào tab Nhãn để tạo.',
+                            style: TextStyle(color: AppColors.textTertiary),
+                          ),
                         ),
                       )
                     else
@@ -323,6 +444,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ),
           ),
           actions: [
+            // Voice Recording Button
+            IconButton(
+              icon: Icon(
+                _isRecording ? Icons.mic : (_audioDuration != null ? Icons.mic_rounded : Icons.mic_none_outlined),
+                color: _isRecording ? Colors.red : (_audioDuration != null ? AppColors.primary : AppColors.textSecondary),
+              ),
+              tooltip: _isRecording ? 'Đang ghi âm...' : 'Ghi âm giọng nói',
+              onPressed: _toggleRecording,
+            ),
+
+            // Selective Note Lock Button
+            IconButton(
+              icon: Icon(
+                _isLocked ? Icons.lock_rounded : Icons.lock_open_outlined,
+                color: _isLocked ? AppColors.primary : AppColors.textSecondary,
+              ),
+              tooltip: _isLocked ? 'Ghi chú đang khóa (Bấm để mở khóa)' : 'Khóa ghi chú này bằng mã PIN',
+              onPressed: _toggleLock,
+            ),
+
             // Checklist Mode Toggle
             IconButton(
               icon: Icon(
@@ -362,6 +503,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         body: SafeArea(
           child: Column(
             children: [
+              // Recording Bar if active
+              if (_isRecording)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                  child: AudioRecordingBar(
+                    onSaveRecording: _onSaveRecording,
+                    onCancel: _onCancelRecording,
+                  ),
+                ),
+
               // Selected Labels Chips
               if (noteLabels.isNotEmpty)
                 Container(
@@ -402,6 +553,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Audio Memo Player if attached
+                      if (_audioDuration != null)
+                        AudioMemoPlayer(
+                          durationSeconds: _audioDuration!,
+                          title: _audioTitle,
+                          onDelete: _onDeleteAudio,
+                        ),
+
                       // Title TextField
                       TextField(
                         controller: _titleController,

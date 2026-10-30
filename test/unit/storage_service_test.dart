@@ -276,5 +276,61 @@ void main() {
       expect(updatedNote!.labelIds.contains('lbl_cascade'), isFalse);
       expect(updatedNote.labelIds.contains('lbl_work'), isTrue);
     });
+
+    test('10. Selective Note Lock and PIN verification', () async {
+      expect(storage.hasPin, isFalse);
+
+      // Set user PIN
+      await storage.setLockPin('1234');
+      expect(storage.hasPin, isTrue);
+      expect(storage.verifyPin('1234'), isTrue);
+      expect(storage.verifyPin('9999'), isFalse);
+
+      // Create a locked note and an unlocked note
+      final lockedNote = Note(
+        id: 'locked_note_1',
+        title: 'Bí mật kinh doanh',
+        content: 'Nội dung tuyệt mật không được xem',
+        isLocked: true,
+      );
+      final unlockedNote = Note(
+        id: 'unlocked_note_1',
+        title: 'Ghi chú công khai',
+        content: 'Nội dung bình thường',
+        isLocked: false,
+      );
+
+      await storage.saveNote(lockedNote);
+      await storage.saveNote(unlockedNote);
+
+      final retrievedLocked = storage.getNoteById('locked_note_1');
+      expect(retrievedLocked, isNotNull);
+      expect(retrievedLocked!.isLocked, isTrue);
+
+      final retrievedUnlocked = storage.getNoteById('unlocked_note_1');
+      expect(retrievedUnlocked, isNotNull);
+      expect(retrievedUnlocked!.isLocked, isFalse);
+    });
+
+    test('11. Audio Memo recording and duration formatting', () async {
+      final audioNote = Note(
+        id: 'audio_note_1',
+        title: 'Ghi chú cuộc họp có ghi âm',
+        content: 'Đã thảo luận chiến lược Q4',
+        audioDuration: 75, // 1 minute 15 seconds
+        audioTitle: 'Ghi âm cuộc họp',
+      );
+
+      expect(audioNote.hasAudio, isTrue);
+      expect(audioNote.audioDurationFormatted, equals('1:15'));
+
+      await storage.saveNote(audioNote);
+
+      final retrieved = storage.getNoteById('audio_note_1');
+      expect(retrieved, isNotNull);
+      expect(retrieved!.hasAudio, isTrue);
+      expect(retrieved.audioDuration, equals(75));
+      expect(retrieved.audioTitle, equals('Ghi âm cuộc họp'));
+    });
   });
 }

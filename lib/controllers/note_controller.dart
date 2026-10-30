@@ -165,4 +165,21 @@ class NoteController extends ChangeNotifier {
       return null;
     }
   }
+
+  bool get hasPin => storage.hasPin;
+  bool verifyPin(String pin) => storage.verifyPin(pin);
+  Future<void> setPin(String pin) async {
+    await storage.setLockPin(pin);
+    notifyListeners();
+  }
+
+  Future<void> toggleNoteLock(String id) async {
+    final note = storage.getNoteById(id);
+    if (note != null) {
+      final updated = note.copyWith(isLocked: !note.isLocked);
+      await storage.saveNote(updated);
+      _refreshData();
+      notifyListeners();
+    }
+  }
 }

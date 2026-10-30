@@ -22,23 +22,33 @@ abstract class StorageService {
     String? labelId,
     SortOption sortOption = SortOption.updatedDesc,
   });
+
+  // Selective Note Lock PIN management
+  String? getLockPin();
+  Future<void> setLockPin(String pin);
+  bool verifyPin(String pin);
+  bool get hasPin;
 }
 
 class LocalStorageService implements StorageService {
   static const String _notesKey = 'notes_data_v1';
   static const String _labelsKey = 'labels_data_v1';
+  static const String _pinKey = 'user_lock_pin_v1';
 
   final SharedPreferences? _prefsInstance;
   late SharedPreferences _prefs;
 
   final List<Note> _notes = [];
   final List<Label> _labels = [];
+  String? _lockPin;
 
   LocalStorageService([this._prefsInstance]);
 
   @override
   Future<void> init() async {
     _prefs = _prefsInstance ?? await SharedPreferences.getInstance();
+
+    _lockPin = _prefs.getString(_pinKey);
 
     final labelsJson = _prefs.getString(_labelsKey);
     if (labelsJson != null && labelsJson.isNotEmpty) {
@@ -65,6 +75,24 @@ class LocalStorageService implements StorageService {
     } else {
       _seedDefaultNotes();
     }
+  }
+
+  @override
+  String? getLockPin() => _lockPin;
+
+  @override
+  bool get hasPin => _lockPin != null && _lockPin!.isNotEmpty;
+
+  @override
+  Future<void> setLockPin(String pin) async {
+    _lockPin = pin;
+    await _prefs.setString(_pinKey, pin);
+  }
+
+  @override
+  bool verifyPin(String pin) {
+    if (_lockPin == null || _lockPin!.isEmpty) return false;
+    return _lockPin == pin;
   }
 
   void _seedDefaultLabels() {
@@ -130,7 +158,8 @@ class LocalStorageService implements StorageService {
     if (index >= 0) {
       _notes[index] = _notes[index].copyWith(
         isDeleted: true,
-        deletedAt: DateTime.now(),
+        deletedAt: DateTime.now().millisecondsSinceEpoch,
+        isPinned: false,
       );
       await _saveNotes();
     }
@@ -162,37 +191,30 @@ class LocalStorageService implements StorageService {
 
   @override
   Future<void> saveLabel(Label label) async {
-    final index = _labels.indexWhere((l) => l.id == label.id);
-    if (index >= 0) {
-      _labels[index] = label;
-    } else {
-      _labels.add(label);
-    }
+    _labels.add(label);
     await _saveLabels();
   }
 
   @override
   Future<void> updateLabel(Label label) async {
-    await saveLabel(label);
+    final index = _labels.indexWhere((l) => l.id == label.id);
+    if (index >= 0) {
+      _labels[index] = label;
+      await _saveLabels();
+    }
   }
 
   @override
   Future<void> deleteLabel(String id) async {
     _labels.removeWhere((l) => l.id == id);
-    await _saveLabels();
-
-    // Cascade untag: remove label id from all notes
-    bool changed = false;
     for (int i = 0; i < _notes.length; i++) {
       if (_notes[i].labelIds.contains(id)) {
-        final updatedIds = List<String>.from(_notes[i].labelIds)..remove(id);
-        _notes[i] = _notes[i].copyWith(labelIds: updatedIds);
-        changed = true;
+        final newLabels = List<String>.from(_notes[i].labelIds)..remove(id);
+        _notes[i] = _notes[i].copyWith(labelIds: newLabels);
       }
     }
-    if (changed) {
-      await _saveNotes();
-    }
+    await _saveLabels();
+    await _saveNotes();
   }
 
   @override
