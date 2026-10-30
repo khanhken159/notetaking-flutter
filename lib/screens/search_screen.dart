@@ -264,6 +264,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ...results.map((note) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: NoteCard(
+            key: ValueKey(note.id),
             note: note,
             allLabels: widget.controller.labels,
             onTap: () async {

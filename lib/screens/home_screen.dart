@@ -457,39 +457,31 @@ class HomeScreen extends StatelessWidget {
       children: [
         Expanded(
           child: Column(
-            children: leftNotes.asMap().entries.map((entry) {
-              final note = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: NoteCard(
-                  key: ValueKey(note.id),
-                  note: note,
-                  allLabels: controller.labels,
-                  onTap: () => _navigateToEditNote(context, note),
-                  onPinToggle: () => controller.togglePin(note.id),
-                  animationIndex: entry.key,
-                ),
-              );
-            }).toList(),
+            children: leftNotes.map((note) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: NoteCard(
+                key: ValueKey(note.id),
+                note: note,
+                allLabels: controller.labels,
+                onTap: () => _navigateToEditNote(context, note),
+                onPinToggle: () => controller.togglePin(note.id),
+              ),
+            )).toList(),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
-            children: rightNotes.asMap().entries.map((entry) {
-              final note = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: NoteCard(
-                  key: ValueKey(note.id),
-                  note: note,
-                  allLabels: controller.labels,
-                  onTap: () => _navigateToEditNote(context, note),
-                  onPinToggle: () => controller.togglePin(note.id),
-                  animationIndex: entry.key,
-                ),
-              );
-            }).toList(),
+            children: rightNotes.map((note) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: NoteCard(
+                key: ValueKey(note.id),
+                note: note,
+                allLabels: controller.labels,
+                onTap: () => _navigateToEditNote(context, note),
+                onPinToggle: () => controller.togglePin(note.id),
+              ),
+            )).toList(),
           ),
         ),
       ],
@@ -498,20 +490,16 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildListSection(BuildContext context, List<Note> notes) {
     return Column(
-      children: notes.asMap().entries.map((entry) {
-        final note = entry.value;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: NoteCard(
-            key: ValueKey(note.id),
-            note: note,
-            allLabels: controller.labels,
-            onTap: () => _navigateToEditNote(context, note),
-            onPinToggle: () => controller.togglePin(note.id),
-            animationIndex: entry.key,
-          ),
-        );
-      }).toList(),
+      children: notes.map((note) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: NoteCard(
+          key: ValueKey(note.id),
+          note: note,
+          allLabels: controller.labels,
+          onTap: () => _navigateToEditNote(context, note),
+          onPinToggle: () => controller.togglePin(note.id),
+        ),
+      )).toList(),
     );
   }
 

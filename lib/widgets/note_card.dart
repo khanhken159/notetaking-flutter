@@ -8,7 +8,6 @@ class NoteCard extends StatefulWidget {
   final List<Label> allLabels;
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
-  final int animationIndex;
 
   const NoteCard({
     super.key,
@@ -16,7 +15,6 @@ class NoteCard extends StatefulWidget {
     required this.allLabels,
     required this.onTap,
     required this.onPinToggle,
-    this.animationIndex = 0,
   });
 
   @override
@@ -29,11 +27,9 @@ class _NoteCardState extends State<NoteCard> {
   @override
   void initState() {
     super.initState();
-    final stagger = Duration(
-      milliseconds: 36 * widget.animationIndex.clamp(0, 7).toInt(),
-    );
-    Future<void>.delayed(stagger, () {
-      if (mounted) setState(() => _scale = 1.0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _scale = 1.0);
     });
   }
 
