@@ -8,6 +8,7 @@ class NoteCard extends StatefulWidget {
   final List<Label> allLabels;
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
+  final int animationIndex;
 
   const NoteCard({
     super.key,
@@ -15,14 +16,26 @@ class NoteCard extends StatefulWidget {
     required this.allLabels,
     required this.onTap,
     required this.onPinToggle,
+    this.animationIndex = 0,
   });
 
   @override
   State<NoteCard> createState() => _NoteCardState();
 }
 
-class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin {
-  double _scale = 1.0;
+class _NoteCardState extends State<NoteCard> {
+  double _scale = 0.96;
+
+  @override
+  void initState() {
+    super.initState();
+    final stagger = Duration(
+      milliseconds: 36 * widget.animationIndex.clamp(0, 7).toInt(),
+    );
+    Future<void>.delayed(stagger, () {
+      if (mounted) setState(() => _scale = 1.0);
+    });
+  }
 
   void _onTapDown(TapDownDetails details) {
     setState(() {
@@ -57,8 +70,8 @@ class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin
       button: true,
       child: AnimatedScale(
         scale: _scale,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutBack,
         child: Material(
           color: Colors.white,
           elevation: 0,

@@ -94,10 +94,27 @@ class CustomBottomNavBar extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Icon(
-                      isSelected ? activeIcon : icon,
-                      size: 24,
-                      color: color,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      width: 48,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primaryLight : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: AnimatedScale(
+                          scale: isSelected ? 1.1 : 1,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutBack,
+                          child: Icon(
+                            isSelected ? activeIcon : icon,
+                            size: 24,
+                            color: color,
+                          ),
+                        ),
+                      ),
                     ),
                     if (badgeCount > 0)
                       Positioned(
