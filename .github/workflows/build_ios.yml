@@ -1,4 +1,4 @@
-name: Build iOS IPA & Android APK
+name: Build and Deploy (iOS IPA, Android APK & GitHub Pages)
 
 on:
   push:
@@ -9,12 +9,18 @@ permissions:
   contents: write
 
 jobs:
-  build-ios:
-    name: Build iOS IPA
+  build-and-deploy:
+    name: Build & Deploy All Platforms
     runs-on: macos-14
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -28,36 +34,43 @@ jobs:
       - name: Run Tests
         run: flutter test
 
-      - name: Build iOS without code signing
-        run: flutter build ios --release --no-codesign
+      # 1. Build Web & Deploy to GitHub Pages
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href "/notetaking-flutter/"
 
-      - name: Package Payload into IPA
+      - name: Deploy to GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+
+      # 2. Build Android APK
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      # 3. Build iOS IPA without code signing
+      - name: Build iOS IPA
         run: |
+          flutter build ios --release --no-codesign
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r -9 GhiChu.ipa Payload
 
-      - name: Upload iOS IPA Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GhiChu-iOS-IPA
-          path: GhiChu.ipa
-
-      - name: Create GitHub Release
+      # 4. Automatically Update GitHub Release
+      - name: Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: "Bản cài đặt Ghi chú v1.0.0 (iPhone & Android)"
+          tag_name: latest
+          name: "Bản phát hành Ghi chú mới nhất (Tự động cập nhật)"
           body: |
-            ## 🎉 Ứng dụng Ghi chú tiếng Việt đa nền tảng
+            ## 🎉 Bản cập nhật mới nhất của ứng dụng Ghi chú
+            Hệ thống tự động biên dịch và cập nhật mỗi khi có mã nguồn mới!
             
-            ### 📱 Hướng dẫn cài GhiChu.ipa lên iPhone 12 (Qua Sideloadly / AltStore):
-            1. Tải file `GhiChu.ipa` bên dưới về máy tính.
-            2. Mở phần mềm miễn phí **Sideloadly** trên máy tính.
-            3. Cắm cáp iPhone 12 vào máy tính.
-            4. Kéo thả file `GhiChu.ipa` vào Sideloadly, nhập Apple ID của bạn và nhấn **Start**.
-            5. Trên iPhone vào **Cài đặt** -> **Cài đặt chung** -> **Quản lý VPN & Thiết bị** -> Chọn Apple ID và bấm **Tin cậy**.
+            - 📱 **GhiChu.ipa**: Dành cho iPhone 12 (Cài đặt qua Sideloadly, AltStore, Scarlet)
+            - 🤖 **app-release.apk**: Dành cho điện thoại Android
+            - 🌐 **Web App iPhone**: [https://khanhken159.github.io/notetaking-flutter/](https://khanhken159.github.io/notetaking-flutter/)
           files: |
             GhiChu.ipa
+            build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
