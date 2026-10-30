@@ -52,6 +52,17 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
             actions: [
+              // Security PIN settings
+              Semantics(
+                label: 'Cài đặt mã PIN bảo vệ ghi chú',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                  tooltip: 'Mã PIN bảo mật (1234)',
+                  onPressed: () => _managePin(context),
+                ),
+              ),
+
               // Grid / List toggle
               Semantics(
                 label: controller.viewMode == ViewMode.grid
@@ -306,6 +317,8 @@ class HomeScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: [
+        _buildFeatureBanner(context),
+        const SizedBox(height: 14),
         if (pinnedNotes.isNotEmpty) ...[
           _buildSectionHeader('ĐÃ GHIM', pinnedNotes.length),
           const SizedBox(height: 8),
@@ -324,6 +337,74 @@ class HomeScreen extends StatelessWidget {
             _buildListSection(context, otherNotes),
         ],
       ],
+    );
+  }
+
+  Widget _buildFeatureBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.tips_and_updates, color: Color(0xFFD97706), size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '✨ Đã cập nhật tính năng mới:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text.rich(
+                  TextSpan(
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.3),
+                    children: [
+                      const TextSpan(text: '• Khóa ghi chú: Chạm ghi chú '),
+                      const TextSpan(
+                        text: '🔒 Kế hoạch tài chính',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: ' bên dưới, nhập PIN '),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFD97706), width: 0.8),
+                          ),
+                          child: const Text(
+                            '1234',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB45309)),
+                          ),
+                        ),
+                      ),
+                      const TextSpan(text: ' để mở!\n'),
+                      const TextSpan(text: '• Ghi âm: Mở bất kỳ ghi chú nào và chạm icon 🎙️ ở thanh trên để thu âm giọng nói.'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -432,7 +513,7 @@ class HomeScreen extends StatelessWidget {
       final isVerified = await PinDialog.showVerify(
         context: context,
         title: 'Mở khóa ghi chú',
-        subtitle: 'Ghi chú này đã được bảo vệ bằng mã PIN',
+        subtitle: 'Nhập mã PIN gồm 4 số để mở (Mặc định: 1234)',
         onVerify: (pin) async => controller.verifyPin(pin),
       );
       if (isVerified != true) return;
@@ -444,5 +525,87 @@ class HomeScreen extends StatelessWidget {
         builder: (_) => NoteEditorScreen(controller: controller, note: note),
       ),
     );
+  }
+
+  void _managePin(BuildContext context) async {
+    final currentPin = controller.storage.getLockPin() ?? '1234';
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_rounded, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Bảo mật & Mã PIN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tính năng khóa ghi chú bảo vệ những ghi chú riêng tư do bạn chọn.',
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.key, size: 20, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Mã PIN hiện tại: $currentPin',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('change'),
+            child: const Text('Đổi mã PIN mới'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop('close'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Đã hiểu'),
+          ),
+        ],
+      ),
+    );
+
+    if (action == 'change' && context.mounted) {
+      final newPin = await PinDialog.showSetup(
+        context: context,
+        title: 'Đổi mã PIN mới',
+        subtitle: 'Nhập 4 số PIN mới để bảo vệ ghi chú',
+      );
+      if (newPin != null) {
+        await controller.setLockPin(newPin);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã cập nhật mã PIN thành công!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      }
+    }
   }
 }

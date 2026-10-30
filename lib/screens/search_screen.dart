@@ -271,7 +271,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 final isVerified = await PinDialog.showVerify(
                   context: context,
                   title: 'Mở khóa ghi chú',
-                  subtitle: 'Ghi chú này đã được bảo vệ bằng mã PIN',
+                  subtitle: 'Nhập mã PIN gồm 4 số để mở (Mặc định: 1234)',
                   onVerify: (pin) async => widget.controller.verifyPin(pin),
                 );
                 if (isVerified != true) return;

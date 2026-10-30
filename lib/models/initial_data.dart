@@ -170,6 +170,9 @@ List<Note> getInitialNotes() {
       isPinned: false,
       createdAt: now - 8 * day,
       updatedAt: now - 3 * day,
+      audioDuration: 24,
+      audioTitle: 'Ghi âm thảo luận ý tưởng',
+      audioData: 'demo_voice_data',
     ),
     Note(
       id: 'note-6',
@@ -187,6 +190,7 @@ List<Note> getInitialNotes() {
       isPinned: false,
       createdAt: now - 10 * day,
       updatedAt: now - 4 * day,
+      isLocked: true,
     ),
     Note(
       id: 'note-7',

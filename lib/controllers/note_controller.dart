@@ -172,6 +172,7 @@ class NoteController extends ChangeNotifier {
     await storage.setLockPin(pin);
     notifyListeners();
   }
+  Future<void> setLockPin(String pin) => setPin(pin);
 
   Future<void> toggleNoteLock(String id) async {
     final note = storage.getNoteById(id);

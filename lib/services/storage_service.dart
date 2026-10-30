@@ -31,7 +31,7 @@ abstract class StorageService {
 }
 
 class LocalStorageService implements StorageService {
-  static const String _notesKey = 'notes_data_v1';
+  static const String _notesKey = 'notes_data_v2';
   static const String _labelsKey = 'labels_data_v1';
   static const String _pinKey = 'user_lock_pin_v1';
 
@@ -73,8 +73,35 @@ class LocalStorageService implements StorageService {
         _seedDefaultNotes();
       }
     } else {
-      _seedDefaultNotes();
+      // Check for v1 migration
+      final oldNotesJson = _prefs.getString('notes_data_v1');
+      if (oldNotesJson != null && oldNotesJson.isNotEmpty) {
+        try {
+          final List<dynamic> list = jsonDecode(oldNotesJson) as List<dynamic>;
+          _notes.clear();
+          _notes.addAll(list.map((e) => Note.fromJson(e as Map<String, dynamic>)));
+        } catch (_) {
+          _seedDefaultNotes();
+        }
+      } else {
+        _seedDefaultNotes();
+      }
     }
+
+    // Ensure demo lock and audio memo are applied so features are immediately visible
+    final note6Idx = _notes.indexWhere((n) => n.id == 'note-6');
+    if (note6Idx >= 0 && !_notes[note6Idx].isLocked) {
+      _notes[note6Idx] = _notes[note6Idx].copyWith(isLocked: true);
+    }
+    final note5Idx = _notes.indexWhere((n) => n.id == 'note-5');
+    if (note5Idx >= 0 && !_notes[note5Idx].hasAudio) {
+      _notes[note5Idx] = _notes[note5Idx].copyWith(
+        audioDuration: 24,
+        audioTitle: 'Ghi âm thảo luận ý tưởng',
+        audioData: 'demo_voice_data',
+      );
+    }
+    await _saveNotes();
   }
 
   @override
@@ -91,7 +118,9 @@ class LocalStorageService implements StorageService {
 
   @override
   bool verifyPin(String pin) {
-    if (_lockPin == null || _lockPin!.isEmpty) return false;
+    if (_lockPin == null || _lockPin!.isEmpty) {
+      return pin == '1234';
+    }
     return _lockPin == pin;
   }
 
