@@ -1,0 +1,63 @@
+name: Build iOS IPA & Android APK
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Build iOS without code signing
+        run: flutter build ios --release --no-codesign
+
+      - name: Package Payload into IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r -9 GhiChu.ipa Payload
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GhiChu-iOS-IPA
+          path: GhiChu.ipa
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "Bản cài đặt Ghi chú v1.0.0 (iPhone & Android)"
+          body: |
+            ## 🎉 Ứng dụng Ghi chú tiếng Việt đa nền tảng
+            
+            ### 📱 Hướng dẫn cài GhiChu.ipa lên iPhone 12 (Qua Sideloadly / AltStore):
+            1. Tải file `GhiChu.ipa` bên dưới về máy tính.
+            2. Mở phần mềm miễn phí **Sideloadly** trên máy tính.
+            3. Cắm cáp iPhone 12 vào máy tính.
+            4. Kéo thả file `GhiChu.ipa` vào Sideloadly, nhập Apple ID của bạn và nhấn **Start**.
+            5. Trên iPhone vào **Cài đặt** -> **Cài đặt chung** -> **Quản lý VPN & Thiết bị** -> Chọn Apple ID và bấm **Tin cậy**.
+          files: |
+            GhiChu.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
